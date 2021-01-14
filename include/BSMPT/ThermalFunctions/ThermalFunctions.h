@@ -83,7 +83,7 @@ double JbosonNumericalIntegration(double x, int diff = 0);
  * \frac{x}{4\pi^2} \right)^l \frac{(2l-3)!!\zeta(2l-1)}{(2l)!! (l+1)}  \f$  ,
  * c.f. Eq. (2.38) in the manual
  * @param x The ratio m^2/T^2
- * @param n The order of the taylor expansion
+ * @param n The order of the taylor expansion, **n < 20**
  * @param diff Returns the expansion for diff = 0 and its derivative for diff =
  * 1
  */
@@ -132,7 +132,7 @@ double JfermionNumericalIntegration(double x, int diff = 0);
  * \frac{(2l-3)!!\zeta(2l-1)}{(2l)!! (l+1)}  \left( 2^{2l-1} - 1\right)  \f$  ,
  * see J_{+,s} in Eq. (2.37) in the manual
  * @param x The ratio m^2/T^2
- * @param n The order of the taylor expansion
+ * @param n The order of the taylor expansion, **n < 20**
  * @param diff Returns the expansion for diff = 0 and dJ_+/dx for diff = 1
  */
 double JfermionInterpolatedLow(double x, int n, int diff = 0);
@@ -152,7 +152,7 @@ double JfermionInterpolated(double x, int diff = 0);
  * \sum\limits_{l=0}^{n} \frac{1}{2^l l!} \frac{\Gamma(5/2+l)}{\Gamma(5/2-l)}
  * x^{-l/2} \f$, cf. Eq. (2.41) in the manual
  * @param x The ratio m^2/T^2
- * @param n The order of the expansion
+ * @param n The order of the expansion, **n < 20**
  * @param diff Returns the expansion for diff = 0 and for its derivative for
  * diff = 1
  */
