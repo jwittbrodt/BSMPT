@@ -1,5 +1,5 @@
 /*
- * WallThicknessLib.h
+ * ThermalFunctions.cpp
  *
  *  Copyright (C) 2020  Philipp Basler, Margarete Mühlleitner and Jonas Müller
 
@@ -24,74 +24,54 @@
 #include <BSMPT/ThermalFunctions/NegativeBosonSpline.h>
 #include <BSMPT/ThermalFunctions/ThermalFunctions.h>
 #include <BSMPT/models/SMparam.h>
-#include <complex>
 
+#include <array>
+#include <complex>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
-#include <gsl/gsl_multimin.h>
-#include <gsl/gsl_multiroots.h>
-#include <gsl/gsl_sf_dilog.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_zeta.h>
 
 namespace BSMPT
 {
 namespace ThermalFunctions
 {
 
-double JbosonIntegrand(const double &x, const double &k, int diff)
+namespace
 {
-  using std::complex;
-  using std::exp;
-  using std::log;
-  complex<double> res(0, 0);
-  complex<double> kcomplex(k, 0), xcomplex(x, 0);
-  complex<double> TmpSqrt = std::sqrt(kcomplex * kcomplex + xcomplex);
+constexpr double piSquared     = M_PI * M_PI;
+constexpr double piToTheFourth = M_PI * M_PI * M_PI * M_PI;
+} // namespace
+
+double JbosonIntegrand(double x, double k, int diff)
+{
+  auto root = std::sqrt(std::complex<double>(k * k + x));
   if (diff == 0)
   {
-    res = kcomplex * kcomplex * log(complex<double>(1, 0) - exp(-TmpSqrt));
+    return std::pow(k, 2) * std::log(1. - std::exp(-root)).real();
   }
   else if (diff == 1)
   {
-    res = kcomplex * kcomplex * exp(-TmpSqrt) /
-          (complex<double>(2, 0) * TmpSqrt *
-           (complex<double>(1, 0) - exp(-TmpSqrt)));
+    return std::pow(k, 2) *
+           (std::exp(-root) / (2. * root * (1. - std::exp(-root)))).real();
   }
-  else
-  {
-    (void)x;
-    (void)k;
-  }
-  return res.real();
+  return 0.;
 }
 
-double JfermionIntegrand(const double &x, const double &k, int diff)
+double JfermionIntegrand(double x, double k, int diff)
 {
-  using std::complex;
-  using std::exp;
-  using std::log;
-  complex<double> res(0, 0);
-  complex<double> kcomplex(k, 0), xcomplex(x, 0);
-  complex<double> TmpSqrt = std::sqrt(kcomplex * kcomplex + xcomplex);
+  auto root = std::sqrt(std::complex<double>(k * k + x));
   if (diff == 0)
   {
-    res = kcomplex * kcomplex * log(complex<double>(1, 0) + exp(-TmpSqrt));
+    return std::pow(k, 2) * std::log(1. + std::exp(-root)).real();
   }
   else if (diff == 1)
   {
-    res = -kcomplex * kcomplex * exp(-TmpSqrt) /
-          (complex<double>(2, 0) * TmpSqrt *
-           (complex<double>(1, 0) + exp(-TmpSqrt)));
+    return -std::pow(k, 2) *
+           (exp(-root) / (2. * root * (1. + exp(-root)))).real();
   }
-  else
-  {
-    (void)x;
-    (void)k;
-  }
-  return res.real();
+  return 0.;
 }
 
-double JbosonNumericalIntegration(const double &x, int diff)
+double JbosonNumericalIntegration(double x, int diff)
 {
   const std::size_t workspaceSize = 1000;
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(workspaceSize);
@@ -117,7 +97,7 @@ double JbosonNumericalIntegration(const double &x, int diff)
   return result;
 }
 
-double JfermionNumericalIntegration(const double &x, int diff)
+double JfermionNumericalIntegration(double x, int diff)
 {
   const std::size_t workspaceSize = 1000;
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(workspaceSize);
@@ -143,47 +123,62 @@ double JfermionNumericalIntegration(const double &x, int diff)
   return result;
 }
 
-double JfermionInterpolatedLow(const double &x, const int &n, int diff)
+double JfermionInterpolatedLow(double x, int n, int diff)
 {
+  // (2*l-3)!! * zeta(2*l-1) / ((2*l)!! * (l+1)) * (pow(2, 2*l-1) - 1)
+  // first two entries are not needed and set to zero
+  static constexpr std::array<double, 20> Kl{0.,
+                                             0.,
+                                             3.50599930088215050e-01,
+                                             5.02261881397569887e-01,
+                                             1.00047154865237675e+00,
+                                             2.33345313876230254e+00,
+                                             6.00003399630653966e+00,
+                                             1.65000103629144554e+01,
+                                             4.76666699902108491e+01,
+                                             1.43000001107512020e+02,
+                                             4.42000000380316351e+02,
+                                             1.39966666680047683e+03,
+                                             4.52200000004803405e+03,
+                                             1.48580000000175387e+04,
+                                             4.95266666666731617e+04,
+                                             1.67152500000002445e+05,
+                                             5.70285000000000931e+05,
+                                             1.96431500000000023e+06,
+                                             6.82340999999999907e+06,
+                                             2.38819350000000000e+07};
+
   if (x == 0 and diff == 0)
   {
-    return -7 * pow(M_PI, 4) / 360.0;
+    return -7 * piToTheFourth / 360.0;
   }
   else if (x == 0 and diff == 1)
   {
-    return pow(M_PI, 2) / 24;
+    return piSquared / 24;
   }
   using std::log;
   using std::pow;
   double res = 0;
-  double cf  = 1.5 + 2 * log(4 * M_PI) - 2 * C_euler_gamma - 2 * log(4);
+  static const double cf =
+      1.5 + 2 * log(4 * M_PI) - 2 * C_euler_gamma - 2 * log(4);
   if (diff == 0)
   {
-    res = -7 * pow(M_PI, 4) / 360.0;
-    res += pow(M_PI, 2) / 24 * x;
-    res += 1 / 32.0 * pow(x, 2) * (log(x) - cf);
+    res = -7 * piToTheFourth / 360.0 + piSquared / 24 * x +
+          1 / 32.0 * pow(x, 2) * (log(x) - cf);
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      double Kl = gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
-                  (gsl_sf_doublefact(2 * l) * (l + 1)) *
-                  (pow(2, 2 * l - 1) - 1);
-      sum += pow(-x / (4 * pow(M_PI, 2)), l) * Kl;
+      sum += pow(-x / (4 * piSquared), l) * Kl[l];
     }
-    res += -pow(M_PI, 2) * x * sum;
+    res += -piSquared * x * sum;
   }
   else if (diff == 1)
   {
-    res = pow(M_PI, 2) / 24.0;
-    res += x * (-6 * cf + 3) / 96;
-    res += x * log(x) / 16;
+    res        = piSquared / 24.0 + x * (-6 * cf + 3) / 96 + x * log(x) / 16;
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      double Kl = gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
-                  (gsl_sf_doublefact(2 * l) * (l + 1)) *
-                  (pow(2, 2 * l - 1) - 1);
-      sum += -Kl * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      sum += -Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
     }
     res += sum;
   }
@@ -191,56 +186,96 @@ double JfermionInterpolatedLow(const double &x, const int &n, int diff)
   return res;
 }
 
-double JbosonInterpolatedLow(const double &x, const int &n, int diff)
+double JbosonInterpolatedLow(double x, int n, int diff)
 {
+  // (2*l-3)!! * zeta(2*l-1) / ((2*l)!! * (l+1))
+  // first two entries are not needed and set to zero
+  static constexpr std::array<double, 20> Kl{0.,
+                                             0.,
+                                             5.00857042983164358e-02,
+                                             1.62019961741151561e-02,
+                                             7.87772872954627286e-03,
+                                             4.56644449855636483e-03,
+                                             2.93113531817613092e-03,
+                                             2.01440732058533233e-03,
+                                             1.45471571978548087e-03,
+                                             1.09101175017747658e-03,
+                                             8.43049704418222007e-04,
+                                             6.67413394076285765e-04,
+                                             5.39064471615851638e-04,
+                                             4.42802919233454986e-04,
+                                             3.69002424446311487e-04,
+                                             3.11345793886758830e-04,
+                                             2.65559647355955364e-04,
+                                             2.28676362921096933e-04,
+                                             1.98587367782560958e-04,
+                                             1.73763946805947944e-04};
   if (x == 0 and diff == 0)
   {
-    return -pow(M_PI, 4) / 45.0;
+    return -piToTheFourth / 45.0;
   }
   else if (x == 0 and diff == 1)
   {
-    return pow(M_PI, 2) / 12.0;
+    return piSquared / 12.0;
   }
   using std::log;
   using std::pow;
   using std::sqrt;
-  double cb  = 1.5 + 2 * std::log(4 * M_PI) - 2 * C_euler_gamma;
-  double res = 0;
+  static const double cb = 1.5 + 2 * std::log(4 * M_PI) - 2 * C_euler_gamma;
+  double res             = 0;
   if (diff == 0)
   {
-    res = -pow(M_PI, 4) / 45.0;
-    res += pow(M_PI, 2) * x / 12.0;
+    res = -piToTheFourth / 45.0;
+    res += piSquared * x / 12.0;
     res += -M_PI * pow(x, 1.5) / 6;
     res += -pow(x, 2) * (log(x) - cb) / 32.0;
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      double Kl = gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
-                  (gsl_sf_doublefact(2 * l) * (l + 1));
-      sum += pow(-x / (4 * pow(M_PI, 2)), l) * Kl;
+      sum += pow(-x / (4 * piSquared), l) * Kl[l];
     }
-    res += pow(M_PI, 2) * x * sum;
+    res += piSquared * x * sum;
   }
   else if (diff == 1)
   {
-    res = pow(M_PI, 2);
+    res = piSquared;
     res += x * (6 * cb - 3) / 96.0;
     res += -x * log(x) / 16.0;
     res += -M_PI * sqrt(x) / 4.0;
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      double Kl = gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
-                  (gsl_sf_doublefact(2 * l) * (l + 1));
-      sum += Kl * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      sum += Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
     }
     res += sum;
   }
   return res;
 }
 
-double JInterpolatedHigh(const double &x, const int &n, int diff)
+double JInterpolatedHigh(double x, int n, int diff)
 {
+  // 1 / (pow(2, l) * l!) * gamma(2.5 + l) / gamma(2.5 - l)
+  static constexpr std::array<double, 20> Kl{1.,
+                                             1.875,
+                                             8.203125e-01,
+                                             -3.076171875e-01,
+                                             3.17230224609375278e-01,
+                                             -5.15499114990234708e-01,
+                                             1.12765431404113836e+00,
+                                             -3.08091267943382130e+00,
+                                             1.00611054687760770e+01,
+                                             -3.81483582357759801e+01,
+                                             1.64514794891783822e+02,
+                                             -7.94531679875092095e+02,
+                                             4.24577866433252620e+03,
+                                             -2.48623000632548901e+04,
+                                             1.58275178081256512e+05,
+                                             -1.08814184930863883e+06,
+                                             8.03354724684893526e+06,
+                                             -6.33823249696243107e+07,
+                                             5.32147436724137306e+08,
+                                             -4.73681238084051323e+09};
+
   using std::exp;
   using std::pow;
   using std::sqrt;
@@ -251,9 +286,7 @@ double JInterpolatedHigh(const double &x, const int &n, int diff)
     double sum = 0;
     for (int l = 0; l <= n; l++)
     {
-      double Kl = 1 / (std::pow(2, l) * gsl_sf_fact(l)) *
-                  gsl_sf_gamma(2.5 + l) / gsl_sf_gamma(2.5 - l);
-      sum += Kl * pow(x, -l / 2.0);
+      sum += Kl[l] * pow(x, -l / 2.0);
     }
     res = -exp(-sqrt(x)) * sqrt(M_PI / 2 * pow(x, 1.5)) * sum;
   }
@@ -262,16 +295,14 @@ double JInterpolatedHigh(const double &x, const int &n, int diff)
     double sum = 0;
     for (int l = 0; l <= n; l++)
     {
-      double Kl = 1 / (std::pow(2, l) * gsl_sf_fact(l)) *
-                  gsl_sf_gamma(2.5 + l) / gsl_sf_gamma(2.5 - l);
-      sum += Kl * pow(x, (1 - l) / 2) * (2 * l + 2 * sqrt(x) - 3);
+      sum += Kl[l] * pow(x, (1 - l) / 2) * (2 * l + 2 * sqrt(x) - 3);
     }
     res = exp(-sqrt(x)) * sqrt(2 * M_PI) / (8 * pow(x, 3.0 / 4.0)) * sum;
   }
   return res;
 }
 
-double JfermionInterpolated(const double &x, int diff)
+double JfermionInterpolated(double x, int diff)
 {
   double res = 0;
   if (x >= C_FermionTheta)
@@ -286,7 +317,7 @@ double JfermionInterpolated(const double &x, int diff)
   return res;
 }
 
-double JbosonInterpolated(const double &x, int diff)
+double JbosonInterpolated(double x, int diff)
 {
   double res = 0;
   if (x >= C_BosonTheta)
@@ -305,7 +336,7 @@ double JbosonInterpolated(const double &x, int diff)
   return res;
 }
 
-double JbosonInterpolatedNegative(const double &x)
+double JbosonInterpolatedNegative(double x)
 {
   if (x >= 0) return 0;
   double PotVal = 0;
@@ -327,8 +358,7 @@ double JbosonInterpolatedNegative(const double &x)
   }
 
   PotVal = (fnext - fprev) / (xnext - xprev) * (x - xprev) + fprev;
-  PotVal += C_BosonShift;
-  return PotVal;
+  return PotVal + C_BosonShift;
 }
 
 } // namespace ThermalFunctions

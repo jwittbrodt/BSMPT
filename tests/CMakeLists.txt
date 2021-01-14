@@ -1,5 +1,6 @@
 add_library(Catch catch.cpp)
 target_include_directories(Catch INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(Catch PUBLIC CATCH_CONFIG_ENABLE_BENCHMARKING)
 
 set(TESTDIR ${CMAKE_CURRENT_SOURCE_DIR})
 
