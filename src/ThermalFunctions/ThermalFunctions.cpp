@@ -29,6 +29,9 @@
 #include <complex>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_sf_dilog.h>
+#include <gsl/gsl_sf_gamma.h>
+#include <gsl/gsl_sf_zeta.h>
 
 namespace BSMPT
 {
@@ -168,7 +171,16 @@ double JfermionInterpolatedLow(double x, int n, int diff)
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      sum += pow(-x / (4 * piSquared), l) * Kl[l];
+      if (l < Kl.size())
+      {
+        sum += pow(-x / (4 * piSquared), l) * Kl[l];
+      }
+      else
+      {
+        sum += pow(-x / (4 * piSquared), l) * gsl_sf_doublefact(2 * l - 3) *
+               gsl_sf_zeta(2 * l - 1) / (gsl_sf_doublefact(2 * l) * (l + 1)) *
+               (pow(2, 2 * l - 1) - 1);
+      }
     }
     res += -piSquared * x * sum;
   }
@@ -178,7 +190,16 @@ double JfermionInterpolatedLow(double x, int n, int diff)
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      sum += -Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      if (l < Kl.size())
+      {
+        sum -= Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      }
+      else
+      {
+        sum -= pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l) *
+               gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
+               (gsl_sf_doublefact(2 * l) * (l + 1)) * (pow(2, 2 * l - 1) - 1);
+      }
     }
     res += sum;
   }
@@ -232,7 +253,15 @@ double JbosonInterpolatedLow(double x, int n, int diff)
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      sum += pow(-x / (4 * piSquared), l) * Kl[l];
+      if (l < Kl.size())
+      {
+        sum += pow(-x / (4 * piSquared), l) * Kl[l];
+      }
+      else
+      {
+        sum += pow(-x / (4 * piSquared), l) * gsl_sf_doublefact(2 * l - 3) *
+               gsl_sf_zeta(2 * l - 1) / (gsl_sf_doublefact(2 * l) * (l + 1));
+      }
     }
     res += piSquared * x * sum;
   }
@@ -245,7 +274,16 @@ double JbosonInterpolatedLow(double x, int n, int diff)
     double sum = 0;
     for (int l = 2; l <= n; l++)
     {
-      sum += Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      if (l < Kl.size())
+      {
+        sum += Kl[l] * pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l);
+      }
+      else
+      {
+        sum += pow(-x / 4.0, l) * (l + 1) * pow(M_PI, 2 - 2 * l) *
+               gsl_sf_doublefact(2 * l - 3) * gsl_sf_zeta(2 * l - 1) /
+               (gsl_sf_doublefact(2 * l) * (l + 1));
+      }
     }
     res += sum;
   }
@@ -286,7 +324,15 @@ double JInterpolatedHigh(double x, int n, int diff)
     double sum = 0;
     for (int l = 0; l <= n; l++)
     {
-      sum += Kl[l] * pow(x, -l / 2.0);
+      if (l < Kl.size())
+      {
+        sum += Kl[l] * pow(x, -l / 2.0);
+      }
+      else
+      {
+        sum += pow(x, -l / 2.0) / (pow(2, l) * gsl_sf_fact(l)) *
+               gsl_sf_gamma(2.5 + l) / gsl_sf_gamma(2.5 - l);
+      }
     }
     res = -exp(-sqrt(x)) * sqrt(M_PI / 2 * pow(x, 1.5)) * sum;
   }
@@ -295,7 +341,16 @@ double JInterpolatedHigh(double x, int n, int diff)
     double sum = 0;
     for (int l = 0; l <= n; l++)
     {
-      sum += Kl[l] * pow(x, (1 - l) / 2) * (2 * l + 2 * sqrt(x) - 3);
+      if (l < Kl.size())
+      {
+        sum += Kl[l] * pow(x, (1 - l) / 2) * (2 * l + 2 * sqrt(x) - 3);
+      }
+      else
+      {
+        sum += pow(x, (1 - l) / 2) * (2 * l + 2 * sqrt(x) - 3) /
+               (pow(2, l) * gsl_sf_fact(l)) * gsl_sf_gamma(2.5 + l) /
+               gsl_sf_gamma(2.5 - l);
+      }
     }
     res = exp(-sqrt(x)) * sqrt(2 * M_PI) / (8 * pow(x, 3.0 / 4.0)) * sum;
   }
