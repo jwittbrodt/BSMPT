@@ -32,6 +32,8 @@ find_package(Eigen3 3.3.0 REQUIRED)
 find_package(Boost 1.66 REQUIRED)
 find_package(GSL 2.1 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(Vevacious)
+
 
 set(EXPORT_CMAES FALSE)
 include(FetchContent)
@@ -114,8 +116,6 @@ configure_file(tools/cmake/BSMPTConfig.cmake.in BSMPTConfig.cmake @ONLY)
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   export(PACKAGE BSMPT)
 endif()
-
-
 
 # ------------------------ Doxygen --------------------------------------------
 

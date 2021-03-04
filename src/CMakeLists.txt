@@ -6,6 +6,9 @@ if(Boost_FOUND)
   add_subdirectory(Kfactors)
 endif(Boost_FOUND)
 add_subdirectory(ThermalFunctions)
+if(Vevacious_FOUND)
+  add_subdirectory(BounceCalculation)
+endif()
 
 
 #==============================Utility==================================
